@@ -8,6 +8,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -22,6 +23,10 @@ telemetry = [
 class RequestData(BaseModel):
     regions: list[str]
     threshold_ms: int
+
+@app.get("/")
+def root():
+    return {"message": "API Running"}
 
 @app.post("/")
 def analyze(data: RequestData):
