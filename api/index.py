@@ -1,25 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 import numpy as np
+import json
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["POST", "GET", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-    expose_headers=["Access-Control-Allow-Origin"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-telemetry = [
-    {"region": "apac", "latency": 150, "uptime": 99},
-    {"region": "apac", "latency": 210, "uptime": 97},
-    {"region": "amer", "latency": 180, "uptime": 98},
-    {"region": "amer", "latency": 220, "uptime": 96},
-]
+with open("q-vercel-latency.json", "r") as f:
+    telemetry = json.load(f)
 
 class RequestData(BaseModel):
     regions: list[str]
@@ -32,7 +28,7 @@ async def options_handler():
         headers={
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Headers": "*",
         },
     )
 
@@ -52,13 +48,13 @@ async def analyze(data: RequestData):
             if r["region"] == region
         ]
 
-        latencies = [r["latency"] for r in records]
-        uptimes = [r["uptime"] for r in records]
+        latencies = [r["latency_ms"] for r in records]
+        uptimes = [r["uptime_pct"] for r in records]
 
         result[region] = {
-            "avg_latency": sum(latencies) / len(latencies),
-            "p95_latency": float(np.percentile(latencies, 95)),
-            "avg_uptime": sum(uptimes) / len(uptimes),
+            "avg_latency": round(sum(latencies) / len(latencies), 2),
+            "p95_latency": round(float(np.percentile(latencies, 95)), 2),
+            "avg_uptime": round(sum(uptimes) / len(uptimes), 2),
             "breaches": sum(
                 1 for l in latencies
                 if l > data.threshold_ms
