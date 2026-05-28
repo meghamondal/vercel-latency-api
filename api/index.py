@@ -1,16 +1,18 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import numpy as np
 
 app = FastAPI()
 
-CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Expose-Headers": "Access-Control-Allow-Origin",
-}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    expose_headers=["Access-Control-Allow-Origin"],
+)
 
 telemetry = [
     {"region": "apac", "latency": 150, "uptime": 99},
@@ -27,15 +29,16 @@ class RequestData(BaseModel):
 async def options_handler():
     return JSONResponse(
         content={"ok": True},
-        headers=CORS_HEADERS
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
     )
 
 @app.get("/")
 async def root():
-    return JSONResponse(
-        content={"message": "API Running"},
-        headers=CORS_HEADERS
-    )
+    return {"message": "API Running"}
 
 @app.post("/")
 async def analyze(data: RequestData):
@@ -64,5 +67,7 @@ async def analyze(data: RequestData):
 
     return JSONResponse(
         content=result,
-        headers=CORS_HEADERS
+        headers={
+            "Access-Control-Allow-Origin": "*"
+        },
     )
