@@ -1,17 +1,16 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import numpy as np
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Expose-Headers": "Access-Control-Allow-Origin",
+}
 
 telemetry = [
     {"region": "apac", "latency": 150, "uptime": 99},
@@ -25,23 +24,30 @@ class RequestData(BaseModel):
     threshold_ms: int
 
 @app.options("/")
-def options():
+async def options_handler():
     return JSONResponse(
-        content={"message": "ok"},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        },
+        content={"ok": True},
+        headers=CORS_HEADERS
+    )
+
+@app.get("/")
+async def root():
+    return JSONResponse(
+        content={"message": "API Running"},
+        headers=CORS_HEADERS
     )
 
 @app.post("/")
-def analyze(data: RequestData):
+async def analyze(data: RequestData):
 
     result = {}
 
     for region in data.regions:
-        records = [r for r in telemetry if r["region"] == region]
+
+        records = [
+            r for r in telemetry
+            if r["region"] == region
+        ]
 
         latencies = [r["latency"] for r in records]
         uptimes = [r["uptime"] for r in records]
@@ -50,12 +56,13 @@ def analyze(data: RequestData):
             "avg_latency": sum(latencies) / len(latencies),
             "p95_latency": float(np.percentile(latencies, 95)),
             "avg_uptime": sum(uptimes) / len(uptimes),
-            "breaches": sum(1 for l in latencies if l > data.threshold_ms)
+            "breaches": sum(
+                1 for l in latencies
+                if l > data.threshold_ms
+            )
         }
 
     return JSONResponse(
         content=result,
-        headers={
-            "Access-Control-Allow-Origin": "*"
-        },
+        headers=CORS_HEADERS
     )
