@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import numpy as np
@@ -23,12 +24,20 @@ class RequestData(BaseModel):
     regions: list[str]
     threshold_ms: int
 
-@app.get("/")
-def root():
-    return {"message": "API Running"}
+@app.options("/")
+def options():
+    return JSONResponse(
+        content={"message": "ok"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
 
 @app.post("/")
 def analyze(data: RequestData):
+
     result = {}
 
     for region in data.regions:
@@ -44,4 +53,9 @@ def analyze(data: RequestData):
             "breaches": sum(1 for l in latencies if l > data.threshold_ms)
         }
 
-    return result
+    return JSONResponse(
+        content=result,
+        headers={
+            "Access-Control-Allow-Origin": "*"
+        },
+    )
